@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -165,14 +166,12 @@ async function buildPrepList(statusSlug, maxOrders) {
 }
 
 // -------------------- الحماية (Basic Auth) --------------------
-// يمنع أي شخص من فتح الموقع بدون اسم مستخدم وكلمة مرور صحيحين
 
 const SITE_USERNAME = process.env.SITE_USERNAME;
 const SITE_PASSWORD = process.env.SITE_PASSWORD;
 
 function requireAuth(req, res, next) {
   if (!SITE_USERNAME || !SITE_PASSWORD) {
-    // إذا لم تُضبط بيانات الدخول، امنع الوصول تمامًا بدل ترك الموقع مفتوحًا بالخطأ
     return res.status(500).send('لم يتم ضبط بيانات الدخول (SITE_USERNAME / SITE_PASSWORD) على السيرفر.');
   }
 
@@ -190,16 +189,20 @@ function requireAuth(req, res, next) {
     }
   }
 
-  // تم تعديل النص العربي إلى اللاتيني لتفادي خطأ ERR_INVALID_CHAR في Node.js
-  res.set('WWW-Authenticate', 'Basic realm="Orders Prep"');
+  res.setHeader('WWW-Authenticate', 'Basic realm="Order Prep Access"');
   return res.status(401).send('يتطلب تسجيل الدخول');
 }
 
 // -------------------- المسارات (Routes) --------------------
 
 app.use(requireAuth);
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
+
+// مسار الصفحة الرئيسية لتجاوز خطأ 404
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // الحالات المتاحة: under_review = بانتظار المراجعة | in_progress = قيد التنفيذ
 app.get('/api/prep-list/:statusSlug', async (req, res) => {
