@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تجهيز الطلبات - مفلفل</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+      color: #0f172a;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    select, button {
+      padding: 10px 16px;
+      font-size: 15px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    th, td {
+      border: 1px solid #e2e8f0;
+      padding: 12px;
+      text-align: right;
+    }
+    th {
+      background-color: #f1f5f9;
+      font-weight: 600;
+    }
+    .badge {
+      background: #e0e7ff;
+      color: #3730a3;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>قائمة تجهيز الطلبات</h1>
+    
+    <div class="controls">
+      <select id="statusSelect">
+        <option value="under_preparing">قيد التجهيز</option>
+        <option value="processing">جاري التنفيذ</option>
+        <option value="pending">بانتظار المراجعة</option>
+      </select>
+      <button onclick="loadPrepList()">جلب الطلبات</button>
+    </div>
+
+    <div id="content">اضغط على زر "جلب الطلبات" للبدء.</div>
+  </div>
+
+  <script>
+    async function loadPrepList() {
+      const status = document.getElementById('statusSelect').value;
+      const content = document.getElementById('content');
+      content.innerHTML = '<div class="loading">جاري جلب الطلبات ومعالجتها من سلة...</div>';
+
+      try {
+        const res = await fetch(`/api/prep-list/${status}`);
+        if (!res.ok) {
+          throw new Error(`خطأ في السيرفر (${res.status})`);
+        }
+        const data = await res.json();
+
+        if (data.totalOrders === 0) {
+          content.innerHTML = '<p>لا توجد طلبات في هذه الحالة حالياً.</p>';
+          return;
+        }
+
+        let html = `
+          <p>إجمالي الطلبات التي تم جلبها: <strong>${data.totalOrders}</strong></p>
+          <h2>تجميع المنتجات المطلوب تجهيزها</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>اسم المنتج / الخيار</th>
+                <th>رمز SKU</th>
+                <th>إجمالي الكمية المطلوبة</th>
+                <th>عدد الطلبات</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+
+        data.aggregate.forEach(item => {
+          html += `
+            <tr>
+              <td>
+                <strong>${item.name}</strong>
+                ${item.optionsLabel ? `<br><small style="color:#64748b">${item.optionsLabel}</small>` : ''}
+              </td>
+              <td>${item.sku || '—'}</td>
+              <td><span class="badge">${item.totalQty}</span></td>
+              <td>${item.orderCount}</td>
+            </tr>
+          `;
+        });
+
+        html += '</tbody></table>';
+        content.innerHTML = html;
+
+      } catch (err) {
+        content.innerHTML = `<p style="color: #dc2626;">حدث خطأ أثناء جلب البيانات: ${err.message}</p>`;
+      }
+    }
+  </script>
+</body>
+</html>
