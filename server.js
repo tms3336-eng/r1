@@ -190,7 +190,8 @@ function requireAuth(req, res, next) {
     }
   }
 
-  res.set('WWW-Authenticate', 'Basic realm="تجهيز الطلبات"');
+  // تم تعديل النص العربي إلى اللاتيني لتفادي خطأ ERR_INVALID_CHAR في Node.js
+  res.set('WWW-Authenticate', 'Basic realm="Orders Prep"');
   return res.status(401).send('يتطلب تسجيل الدخول');
 }
 
